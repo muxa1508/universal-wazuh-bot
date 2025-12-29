@@ -1,54 +1,49 @@
-# Screaming Raiden Bot for Wazuh
+# Wazuh bot для отправки уведомлений в VK Teams и Telegram
 
-Simple python bot to send Wazuh alerts to Telegram (Russia market-oriented (supports/will support in future KSC/SearchInform/etc.)).
+За основу взят <a href=https://github.com/scarletcorp/raiden-bot-wazuh-telegram>raiden-bot-wazuh-telegram</a>
 
-This fork has optimized code and implements nice alert generation by default (i.e. Kaspersky virus alerting in human-readable Markdown format).
+Правила Wazuh для Kaspersky <a href=https://github.com/casperr2k/KSC_decoders_and_rules_for_Wazuh>here</a>
 
-You can get decoders and rules for Kaspersky <a href=https://github.com/casperr2k/KSC_decoders_and_rules_for_Wazuh>here</a>
+Правила Wazuh для AlertCenter <a href=https://github.com/casperr2k/wazuh-alertcenter-decoder-and-rules>here</a>
 
-You can get decoders and rules for AlertCenter <a href=https://github.com/casperr2k/wazuh-alertcenter-decoder-and-rules>here</a>
+<b>WИзменения:</b>
 
-<b>What's already done:</b>
+- Закомменчены правила для Kaspersky и AlertCenter (Не требуется в текущей инфраструктуре, но может пригодиться в будущем)
+- Пустные строки не добавляются в сообщения
+- Добавлена поддержка VK Teams
+- Настройки ID чатов и токенов ботов перенесены в wazuh-bot.py
 
-- Kaspersky alerts based on custom rules
-- AlertCenter alerts based on custom decoder+rules
-- Critical and high vulnerability alerts (using wazuh vulnerability-detector)
-- Markdown output instead of JSON
-- Telegram hashtags for each type of event
-- Easy-readable structured code base
 
-More alerting rules to be added as soon as I parse the correct parameters.
+<h2>Установка:</h2>
 
-<h2>Installation:</h2>
+! Установка бота производится на wazuh-master сервере и на каждом worker сервере
 
-1. First requirement is you should have working Telegram bot with **API KEY** and **CHAT ID** and also fully working Wazuh server.
+1. Установить зависимости puthon3 :
 
-2. Install requirements with this command :
 ```
 # apt install python3-requests -y
 ```
 
-3. Insert your **CHAT ID** to **custom-raiden-bot.py**. Copy **custom-raiden-bot** and **custom-raiden-bot.py** to **/var/ossec/integrations/**
+2. Зарегистрировать ботов в мессенджерах и прописать их токены в wazuh-bot.py
 
-4. Set correct permission to those files:
-```
-# chown root:wazuh /var/ossec/integrations/custom-raiden-bot*
-# chmod 750 /var/ossec/integrations/custom-raiden-bot*
-```
+3. Добавить в wazuh-bot.py chat_id чатов
 
-5. Insert your API KEY to these line and copy those lines to **/var/ossec/etc/ossec.conf**
+4. Скопировать wazuh-bot и wazuh-bot.py в директорию /var/ossec/integrations каждого сервера кластера wazuh
+
+5. Поменять права на эти файлы:
+```
+chown root:wazuh /var/ossec/integrations/wazuh-bot*
+chmod 750 /var/ossec/integrations/wazuh-bot*
+```
+6. Добавить в файл /var/ossec/etc/ossec.conf на каждом сервере кластера wazuh сведения об интеграции:
 ```
     <integration>
-        <name>custom-raiden-bot</name>
-        <level>12</level>
-        <hook_url>https://api.telegram.org/bot<API_KEY>/sendMessage</hook_url>
+        <name>wazuh-bot</name>
+        <level>16</level>
         <alert_format>json</alert_format>
     </integration>
 ```
-6. Restart wazuh server
+6. перезапустить wazuh manager на каждом сервере кластера wazuh
 ```
-# systemctl restart wazuh-manager
+systemctl restart wazuh-manager
 ```
-<h2>Picture :3</h2>
-
-![IMG_3623](https://github.com/user-attachments/assets/5a3b1812-ae1a-4beb-a9cb-c316eacf4e5e)
