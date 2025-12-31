@@ -3,10 +3,10 @@
 import sys
 import json
 import requests
-import logger
+import logging
 import time
 from requests.auth import HTTPBasicAuth
-from logger.handler import RotatingFileHandler
+from logging.handlers import RotatingFileHandler
 
 #Enable bots: True/False
 telegram = True
@@ -23,17 +23,17 @@ chat_id_vkteams = ""
 token_vkteams = ""
 
 #Logger setup
-logger.setName('wazuh bot log')
+logging.setName('wazuh bot log')
 logger_path = '/var/ossec/logs/bot.log'
-logger.setLevel(logger.Debug)
+logging.setLevel(logging.Debug)
 fileHandler = RotatingFileHandler(logger_path.format(time.strftime("%Y%m%d-%H%M%S")), maxBytes=5000000, backupCount=3)
-logger.addHandler(fileHandler)
+logging.addHandler(fileHandler)
 
 # Read configuration parameters
 alert_file = open(sys.argv[1])
 
-logger.debug('Received alerts file: ' + sys.argv[1])
-logger.info("Received a new Wazuh alert for {0}".format(sys.argv[1]))
+logging.debug('Received alerts file: ' + sys.argv[1])
+logging.info("Received a new Wazuh alert for {0}".format(sys.argv[1]))
 
 
 # Read the alert file
@@ -91,7 +91,7 @@ elif event_id in ["4729", "4757"]:
 
 match vuln_severity:
     case 'Critical':
-        logger.info("Founded CRITICAL vulnerability: " + vuln_CVE)
+        logging.info("Founded CRITICAL vulnerability: " + vuln_CVE)
         message = f"*🚨 Critical Vulnerability Alert 🚨*\n\n" \
                   f"*❗ Критическая уязвимость обнаружена на {agent} ❗*\n\n" \
                   f"*#️⃣ CVE:*\n" \
@@ -104,7 +104,7 @@ match vuln_severity:
                   f"└─ {vuln_reference}\n\n" \
                   f"#vulnerability #critical \n\n"
     case 'High':
-        logger.info("Founded HIGH vulnerability: " + vuln_CVE)
+        logging.info("Founded HIGH vulnerability: " + vuln_CVE)
         message = f"*🚨 Critical Vulnerability Alert 🚨*\n\n" \
                   f"*❗ Критическая уязвимость обнаружена на {agent} ❗*\n\n" \
                   f"*#️⃣ CVE:*\n" \
@@ -220,7 +220,7 @@ if rule_id == "5760":
 else:
 #    CHAT_ID="-19XXXXXXX1"
 
-    logger.info("Received Wazuh Alert: " + description)
+    logging.info("Received Wazuh Alert: " + description)
     message = f"*🚨 Wazuh Alert 🚨*\n\n"
 
     if description != None:
@@ -242,7 +242,7 @@ else:
     if data_win_system_message != None:
         message += f"*📑 Log:* {data_win_system_message}"
 
-logger.debug(message)
+logging.debug(message)
 
 #Telegram sender
 if telegram != False:
@@ -259,9 +259,9 @@ if telegram != False:
  
     # Send the request
     if requests.post(telegram_url, headers=headers, data=json.dumps(msg_data)).status_code == 200:
-        logger.info("Successs sending message to TELEGRAM")
+        logging.info("Successs sending message to TELEGRAM")
     else:
-        logger.error("Failed sending message to TELEGRAM")
+        logging.error("Failed sending message to TELEGRAM")
 
 
 #VK Teams sender
@@ -272,8 +272,8 @@ if vkteams != False:
 
     # Send the request
     if requests.get(vkteams_url).status_code == 200:
-        logger.info("Successs sending message to VK Teams")
+        logging.info("Successs sending message to VK Teams")
     else:
-        logger.error("Failed sending message to VK Teams")
+        logging.error("Failed sending message to VK Teams")
  
 sys.exit(0)

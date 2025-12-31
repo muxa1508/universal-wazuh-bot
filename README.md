@@ -21,7 +21,8 @@
 1. Установить зависимости *python3* :
 
 ```
-apt install python3-requests -y
+sudo apt install python3-requests -y
+sudo /var/ossec/framework/python/bin/pip3 install logging
 ```
 
 2. Зарегистрировать ботов в мессенджерах и прописать их токены в *custom-bot.py*
@@ -45,5 +46,5 @@ chmod 750 /var/ossec/integrations/custom-bot*
 ```
 7. Перезапустить wazuh manager на каждом сервере кластера wazuh
 ```
-systemctl restart wazuh-manager
+sudo systemctl restart wazuh-manager
 ```
