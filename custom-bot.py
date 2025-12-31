@@ -23,10 +23,10 @@ chat_id_vkteams = ""
 token_vkteams = ""
 
 #Logger setup
-logger_path = '/var/ossec/logs/bot.log'
+logger_path = 'logs/bot.log'
+logging.basicConfig(level=logging.DEBUG, filename=logger_path, filemode="w", format="%(asctime)s %(levelname)s %(message)s")
 fileHandler = RotatingFileHandler(logger_path.format(time.strftime("%Y%m%d-%H%M%S")), maxBytes=5000000, backupCount=3)
 logger = logging.getLogger('wazuh_bot')
-logger.setLevel(logging.DEBUG)
 logger.addHandler(fileHandler)
 
 # Read configuration parameters
