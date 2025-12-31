@@ -24,7 +24,12 @@ token_vkteams = ""
 
 #Logger setup
 logger_path = 'logs/bot.log'
-logging.basicConfig(level=logging.DEBUG, filename=logger_path, filemode="w", format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(
+    level=logging.DEBUG, 
+    filename=logger_path, 
+    filemode="a", 
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S %Z")
 fileHandler = RotatingFileHandler(logger_path.format(time.strftime("%Y%m%d-%H%M%S")), maxBytes=5000000, backupCount=3)
 logger = logging.getLogger('wazuh_bot')
 logger.addHandler(fileHandler)
