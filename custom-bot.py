@@ -12,6 +12,9 @@ from logging.handlers import RotatingFileHandler
 telegram = True
 vkteams = True
 
+#Count of tries to send message
+try_counter = 5
+
 #Telegram settings
 #CHAT_ID="-xxxx" --- change with your chat id 
 chat_id_telegram = ""
@@ -263,10 +266,20 @@ if telegram != False:
     headers = {'content-type': 'application/json', 'Accept-Charset': 'UTF-8'}
  
     # Send the request
-    if requests.post(telegram_url, headers=headers, data=json.dumps(msg_data)).status_code == 200:
-        logger.info("Successs sending message to TELEGRAM")
-    else:
-        logger.error("Failed sending message to TELEGRAM")
+    for i in range(try_counter):
+        result_telegram = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data))
+        if result_telegram.status_code == 200:
+            logger.info("Successs sending message to TELEGRAM")
+            break
+        else:
+            logger.error("Failed sending message to TELEGRAM" )
+            logger.info("Number of counts to send message to TELEGRAM: " + str(try_counter - i))
+            logger.info(result_telegram.reason)
+            logger.error("Error: "+ str(result_telegram.status_code))
+            i += 1
+            time.sleep(60)
+
+
 
 
 #VK Teams sender
@@ -276,9 +289,17 @@ if vkteams != False:
     token_vkteams + "&chatId=" + chat_id_vkteams + "&parseMode=MarkdownV2" + "&text=" + message
 
     # Send the request
-    if requests.get(vkteams_url).status_code == 200:
-        logger.info("Successs sending message to VK Teams")
-    else:
-        logger.error("Failed sending message to VK Teams")
- 
+    for i in range(try_counter):
+        result_vkteams = requests.post(vkteams_url)
+        if result_vkteams.status_code == 200:
+            logger.info("Successs sending message to VK Teams")
+            break
+        else:
+            logger.error("Failed sending message to VK Teams")
+            logger.info("Number of counters to send message to VK Teams: " + str(try_counter - i))
+            logger.info(result_vkteams.reason)
+            logger.error("Error: "+ str(result_vkteams.status_code))
+            i += 1
+            time.sleep(60)
+   
 sys.exit(0)
