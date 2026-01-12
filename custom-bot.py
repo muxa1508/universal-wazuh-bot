@@ -38,13 +38,14 @@ logger = logging.getLogger('wazuh_bot')
 logger.addHandler(fileHandler)
 
 
-def telegram_send(telegram, chat_id_telegram, token_telegram, message):
+def telegram_send(telegram, chat_id_telegram, token_telegram, message, message_extended):
     if telegram != False:
         telegram_url = "https://api.telegram.org/bot" + token_telegram + "/sendMessage"
         # Generate request data
+        message_extended = str(message_extended)
         msg_data = {
             'chat_id': chat_id_telegram,
-            'text': message,
+            'text': message + f"*📑 Log:* {message_extended}\n",
             'parse_mode': 'Markdown'  # Using Markdown formatting
         }
     
@@ -55,6 +56,22 @@ def telegram_send(telegram, chat_id_telegram, token_telegram, message):
             if result_telegram.status_code == 200:
                 logger.info("Successs sending message to TELEGRAM")
                 break
+            elif result_telegram.status_code == 400:
+                logger.error("Failed sending message to TELEGRAM. Try send splitted without *Md*")
+                msg_data_base = {
+                    'chat_id': chat_id_telegram,
+                    'text': message,
+                    'parse_mode': 'Markdown'  # Using Markdown formatting
+                }
+                msg_data_extended = {
+                    'chat_id': chat_id_telegram,
+                    'text': message_extended,
+                    'parse_mode': 'Markdown'  # Using Markdown formatting
+                }
+                result_telegram_base = requests.posts(telegram_url, headers=headers, data=json.dumps(msg_data_base))
+                if result_telegram_base.status_code == 200:
+                    result_telegram_extended = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data_extended))
+                    result_telegram.status_code = result_telegram_extended.status_code
             else:
                 logger.error("Failed sending message to TELEGRAM" )
                 logger.info("Number of counts to send message to TELEGRAM: " + str(try_counter - i))
@@ -63,10 +80,10 @@ def telegram_send(telegram, chat_id_telegram, token_telegram, message):
                 i += 1
                 time.sleep(60)
 
-def vKTeams_send(vkteams, chat_id_vkteams, token_vkteams, message):
+def vKTeams_send(vkteams, chat_id_vkteams, token_vkteams, message, message_extended):
     if vkteams != False:
         vkteams_url = "https://myteam.mail.ru/bot/v1//messages/sendText" + "?token=" + \
-            token_vkteams + "&chatId=" + chat_id_vkteams + "&parseMode=MarkdownV2" + "&text=" + message
+            token_vkteams + "&chatId=" + chat_id_vkteams + "&parseMode=MarkdownV2" + "&text=" + message + str(message_extended)
 
         # Send the request
         for i in range(try_counter):
@@ -293,13 +310,16 @@ else:
     if action != None:
         message += f"*🔧 Действие:* {action}\n"
 
+    message_extended = None
     message_lenght = len(message)
     if full_log != None:
         full_log_length = len(full_log)
+        message_extended = full_log
     else:
         full_log_length = 0
     if data_win_system_message != None:
         data_win_system_message_length = len(data_win_system_message)
+        message_extended = data_win_system_message
     else: 
         data_win_system_message_length = 0
     logger.debug("message_lenght: " + str(message_lenght) + ", full_log_lenght:" + str(full_log_length) + ", dwsm_lenght: " + str(data_win_system_message_length))
@@ -309,21 +329,21 @@ else:
         vKTeams_send(vkteams, chat_id_vkteams,token_vkteams,message + '\n\n' +'1/2')
         logger.info("message 1/2 sended")
         if full_log != None:
-            telegram_send(telegram, chat_id_telegram,token_telegram,'2/2' + '\n\n' + full_log)
-            vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, '2/2' + '\n\n' + full_log)
+            telegram_send(telegram, chat_id_telegram,token_telegram,'2/2' + '\n\n' + message_extended)
+            vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, '2/2' + '\n\n' + message_extended)
             logger.info("full_log 2/2 sended")
         if data_win_system_message != None:
-            telegram_send(telegram, chat_id_telegram,token_telegram,'2/2' + '\n\n' + data_win_system_message)
-            vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, '2/2' + '\n\n' + data_win_system_message)
+            telegram_send(telegram, chat_id_telegram,token_telegram,'2/2' + '\n\n' + message_extended)
+            vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, '2/2' + '\n\n' + message_extended)
             logger.info("data_win_system_message 2/2 sended")
     else:   
-        if full_log != None:
-            message += f"*📑 Log:* {full_log}\n"
-        if data_win_system_message != None:
-            message += f"*📑 Log:* {data_win_system_message}"
-        telegram_send(telegram, chat_id_telegram,token_telegram,message)
-        vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, message)
-        logger.info("Full message sended. Count of symbols: " + str(len(message)))
+        # if full_log != None:
+        #     message += f"*📑 Log:* {full_log}\n"
+        # if data_win_system_message != None:
+        #     message += f"*📑 Log:* {data_win_system_message}"
+        telegram_send(telegram, chat_id_telegram,token_telegram,message, message_extended)
+        vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, message, message_extended)
+        logger.info("Full message sended. Count of symbols: " + str(len(message + message_extended)))
 
 
 logger.info("Bot complete job")   
