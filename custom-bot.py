@@ -77,13 +77,15 @@ def telegram_send(telegram, chat_id_telegram, token_telegram, message, message_e
                 logger.info("Number of counts to send message to TELEGRAM: " + str(try_counter - i))
                 logger.info(result_telegram.reason)
                 logger.error("Error: "+ str(result_telegram.status_code))
+                logger.debug(str(msg_data))
                 i += 1
                 time.sleep(60)
 
 def vKTeams_send(vkteams, chat_id_vkteams, token_vkteams, message, message_extended):
     if vkteams != False:
+        message += f"*📑 Log:* {str(message_extended)}"
         vkteams_url = "https://myteam.mail.ru/bot/v1//messages/sendText" + "?token=" + \
-            token_vkteams + "&chatId=" + chat_id_vkteams + "&parseMode=MarkdownV2" + "&text=" + message + str(message_extended)
+            token_vkteams + "&chatId=" + chat_id_vkteams + "&parseMode=MarkdownV2" + "&text=" + message
 
         # Send the request
         for i in range(try_counter):
