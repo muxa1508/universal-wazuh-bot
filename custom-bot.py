@@ -324,24 +324,14 @@ if data_win_system_message != None:
     message_extended = data_win_system_message
 else: 
     data_win_system_message_length = 0
+
 logger.debug("message_lenght: " + message_lenght + ", full_log_lenght:" + full_log_length + ", dwsm_lenght: " + data_win_system_message_length)
 
-if (message_lenght + full_log_length) > 4096 or (message_lenght + data_win_system_message_length) > 4080:
-    telegram_send(telegram, chat_id_telegram,token_telegram,message + '\n\n' +'1/2')
-    vKTeams_send(vkteams, chat_id_vkteams,token_vkteams,message + '\n\n' +'1/2')
-    logger.info("message 1/2 sended")
-    if full_log != None:
-        telegram_send(telegram, chat_id_telegram,token_telegram,'2/2' + '\n\n' + message_extended)
-        vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, '2/2' + '\n\n' + message_extended)
-        logger.info("full_log 2/2 sended")
-    if data_win_system_message != None:
-        telegram_send(telegram, chat_id_telegram,token_telegram,'2/2' + '\n\n' + message_extended)
-        vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, '2/2' + '\n\n' + message_extended)
-        logger.info("data_win_system_message 2/2 sended")
-else:   
-    telegram_send(telegram, chat_id_telegram,token_telegram,message, message_extended)
-    vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, message, message_extended)
-    logger.info("Full message sended. Count of symbols: " + len(message + message_extended))
+
+telegram_send(telegram, chat_id_telegram,token_telegram,message, message_extended)
+vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, message, message_extended)
+
+logger.info("Full message sended. Count of symbols: " + len(message + message_extended))
 
 
 logger.info("Bot complete job")   
