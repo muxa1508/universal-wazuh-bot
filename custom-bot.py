@@ -42,17 +42,24 @@ def telegram_send(telegram, chat_id_telegram, token_telegram, message, message_e
     if telegram != False:
         telegram_url = "https://api.telegram.org/bot" + token_telegram + "/sendMessage"
         # Generate request data
+        logger.debug("Start send message to TELEGRAM")
         message_extended = str(message_extended)
+        logger.debug("message_extended converted")
+
+        message_full = message + f"*📑 Log:* {message_extended}"
+        logger.debug(message_full)
         msg_data = {
             'chat_id': chat_id_telegram,
-            'text': message + f"*📑 Log:* {message_extended}\n",
+            'text': message_full,
             'parse_mode': 'Markdown'  # Using Markdown formatting
         }
     
         headers = {'content-type': 'application/json', 'Accept-Charset': 'UTF-8'}
 
         for i in range(try_counter):
+            logger.debug(str(i) + " - try to send message to TELEGRAM")
             result_telegram = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data))
+            logger.debug("STATUS CODE result_telegram: " + str(result_telegram.status_code)) 
             if result_telegram.status_code == 200:
                 logger.info("Successs sending message to TELEGRAM")
                 break
@@ -61,16 +68,18 @@ def telegram_send(telegram, chat_id_telegram, token_telegram, message, message_e
                 msg_data_base = {
                     'chat_id': chat_id_telegram,
                     'text': message,
-                    'parse_mode': 'MarkdownV2'  # Using Markdown formatting
+                    'parse_mode': 'Markdown'  # Using Markdown formatting
                 }
                 msg_data_extended = {
                     'chat_id': chat_id_telegram,
                     'text': message_extended
                 }
                 result_telegram_base = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data_base))
+                logger.debug("STATUS CODE result_telegram_base: " + str(result_telegram_base.status_code))
                 if result_telegram_base.status_code == 200:
                     result_telegram_extended = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data_extended))
                     result_telegram.status_code = result_telegram_extended.status_code
+                    logger.debug("STATUS CODE result_telegram_extended: " + str(result_telegram_extended.status_code)) 
             else:
                 logger.error("Failed sending message to TELEGRAM" )
                 logger.info("Number of counts to send message to TELEGRAM: " + str(try_counter - i))
@@ -112,6 +121,8 @@ alert_file = open(sys.argv[1])
 logger.debug('Received alerts file: ' + sys.argv[1])
 logger.info("Received a new Wazuh alert for {0}".format(sys.argv[1]))
 
+message = None
+
 
 # Read the alert file
 alert_json = json.loads(alert_file.read())
@@ -129,7 +140,7 @@ subject_user_name = alert_json.get('data', {}).get('win', {}).get('eventdata', {
 event_id = alert_json.get('data', {}).get('win', {}).get('system', {}).get('eventID', None)
 full_log = alert_json.get('full_log', None)
 data_win_system_message = alert_json.get('data', {}).get('win', {}).get('system', {}).get('message', None)
-cluster_node_name = alert_json.get('cluster', {}).get('node', None)
+data_hostname = alert_json.get('data', {}).get('hostName', None)
 
 
 # Vulnerabilities variable section
@@ -167,38 +178,47 @@ if event_id in ["4728", "4756"]:
 elif event_id in ["4729", "4757"]:
     action = "Пользователь удален из группы"
 
-match vuln_severity:
-    case 'Critical':
-        logger.info("Founded CRITICAL vulnerability: " + vuln_CVE)
-        message = f"*🚨 Critical Vulnerability Alert 🚨*\n\n" \
-                  f"* Нода кластера: {cluster_node_name} *\n\n" \
-                  f"*❗ Критическая уязвимость обнаружена на {agent} ❗*\n\n" \
-                  f"*#️⃣ CVE:*\n" \
-                  f"└─ {vuln_CVE}\n\n" \
-                  f"*🔧 Уязвимый модуль:*\n" \
-                  f"└─ {vuln_package} {vuln_version}\n\n" \
-                  f"*📄 Описание:*\n" \
-                  f"*📄 Описание:*\n" \
-                  f"└─ {vuln_title}\n\n" \
-                  f"*📑 Подробнее:*\n" \
-                  f"└─ {vuln_reference}\n\n"
-    case 'High':
-        logger.info("Founded HIGH vulnerability: " + vuln_CVE)
-        message = f"*🚨 Critical Vulnerability Alert 🚨*\n\n" \
-                  f"* Нода кластера: {cluster_node_name} ❗*\n\n" \
-                  f"*❗ Уязвимость высокого уровня обнаружена на {agent} ❗*\n\n" \
-                  f"*#️⃣ CVE:*\n" \
-                  f"└─ {vuln_CVE}\n\n" \
-                  f"*🔧 Уязвимый модуль:*\n" \
-                  f"└─ {vuln_package} {vuln_version}\n\n" \
-                  f"*📄 Описание:*\n" \
-                  f"*📄 Описание:*\n" \
-                  f"└─ {vuln_title}\n\n" \
-                  f"*📑 Подробнее:*\n" \
-                  f"└─ {vuln_reference}\n\n"
-                  
-    case _:
-        pass
+if vuln_severity != None:
+    match vuln_severity:
+        case 'Critical':
+            logger.info("Founded CRITICAL vulnerability: " + vuln_CVE)
+            message = f"*🚨 Critical Vulnerability Alert 🚨*\n\n" \
+                    f"*Имя хоста: {data_hostname} *\n\n" \
+                    f"*❗ Критическая уязвимость обнаружена на {agent} ❗*\n\n" \
+                    f"*#️⃣ CVE:*\n" \
+                    f"└─ {vuln_CVE}\n\n" \
+                    f"*🔧 Уязвимый модуль:*\n" \
+                    f"└─ {vuln_package} {vuln_version}\n\n" \
+                    f"*📄 Описание:*\n" \
+                    f"*📄 Описание:*\n" \
+                    f"└─ {vuln_title}\n\n" \
+                    f"*📑 Подробнее:*\n" \
+                    f"└─ {vuln_reference}\n\n"
+            
+        case 'High':
+            logger.info("Founded HIGH vulnerability: " + vuln_CVE)
+            message = f"*🚨 Critical Vulnerability Alert 🚨*\n\n" \
+                    f"*Имя хоста: {data_hostname} ❗*\n\n" \
+                    f"*❗ Уязвимость высокого уровня обнаружена на {agent} ❗*\n\n" \
+                    f"*#️⃣ CVE:*\n" \
+                    f"└─ {vuln_CVE}\n\n" \
+                    f"*🔧 Уязвимый модуль:*\n" \
+                    f"└─ {vuln_package} {vuln_version}\n\n" \
+                    f"*📄 Описание:*\n" \
+                    f"*📄 Описание:*\n" \
+                    f"└─ {vuln_title}\n\n" \
+                    f"*📑 Подробнее:*\n" \
+                    f"└─ {vuln_reference}\n\n"
+                    
+        case _:
+            logger.debug("Vulnerability type: Unknown")
+            pass
+
+    telegram_send(telegram, chat_id_telegram,token_telegram,message)
+    vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, message)
+        
+
+        
 
 # Generate message based on KES rule ID
 # match rule_id:
@@ -289,49 +309,51 @@ match vuln_severity:
 #     case _:
 #         pass
 
+if rule_id != None:
+    logger.info("Start loop")
+    logger.info("Received Wazuh Alert: " + description)
 
+    message = f"*🚨 Wazuh Alert 🚨*\n\n"
+    if data_hostname != None:
+        message += f"*Имя хоста: {data_hostname} *\n"
+    if description != None:
+        message += f"*📄 Описание:* {description}\n" 
+    if alert_level != None:
+        message += f"*❗ Уровень:* {alert_level}\n"
+    if agent != None:
+        message += f"*💻 Агент:* {agent}\n"
+    if agent_ip != None:
+        message += f"*🌍 IP-адрес агента:* {agent_ip}\n"
+    if system_message != None:
+        message += f"*📑 Сообщение:* {system_message}\n"
+    if subject_user_name != None:
+        message += f"*👾 Нарушитель:* {subject_user_name}\n"
+    if action != None:
+        message += f"*🔧 Действие:* {action}\n"
 
-
-logger.info("Received Wazuh Alert: " + description)
-
-message = f"*🚨 Wazuh Alert 🚨*\n\n"
-message += f"* Нода кластера: {cluster_node_name} *\n"
-
-if description != None:
-    message += f"*📄 Описание:* {description}\n" 
-if alert_level != None:
-    message += f"*❗ Уровень:* {alert_level}\n"
-if agent != None:
-    message += f"*💻 Агент:* {agent}\n"
-if agent_ip != None:
-    message += f"*🌍 IP-адрес агента:* {agent_ip}\n"
-if system_message != None:
-    message += f"*📑 Сообщение:* {system_message}\n"
-if subject_user_name != None:
-    message += f"*👾 Нарушитель:* {subject_user_name}\n"
-if action != None:
-    message += f"*🔧 Действие:* {action}\n"
-
-message_extended = None
-message_lenght = len(message)
-if full_log != None:
-    full_log_length = len(full_log)
-    message_extended = full_log
-else:
+    message_extended = None
+    message_lenght = len(message)
     full_log_length = 0
-if data_win_system_message != None:
-    data_win_system_message_length = len(data_win_system_message)
-    message_extended = data_win_system_message
-else: 
     data_win_system_message_length = 0
 
-logger.debug("message_lenght: " + message_lenght + ", full_log_lenght:" + full_log_length + ", dwsm_lenght: " + data_win_system_message_length)
+    if full_log != None:
+        full_log_length = len(full_log)
+        message_extended = full_log
+    else:
+        full_log_length = 0
+    if data_win_system_message != None:
+        data_win_system_message_length = len(data_win_system_message)
+        message_extended = data_win_system_message
+    else: 
+        data_win_system_message_length = 0
+
+    logger.debug("message_lenght: " + str(message_lenght) + ", full_log_lenght:" + str(full_log_length) + ", dwsm_lenght: " + str(data_win_system_message_length))
 
 
-telegram_send(telegram, chat_id_telegram,token_telegram,message, message_extended)
-vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, message, message_extended)
+    telegram_send(telegram, chat_id_telegram,token_telegram,message, message_extended)
+    vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, message, message_extended)
 
-logger.info("Full message sended. Count of symbols: " + len(message + message_extended))
+    logger.info("Full message sended. Count of symbols: " + str(len(message + message_extended)))  
 
 
 logger.info("Bot complete job")   
