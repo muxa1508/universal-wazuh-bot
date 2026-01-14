@@ -61,14 +61,13 @@ def telegram_send(telegram, chat_id_telegram, token_telegram, message, message_e
                 msg_data_base = {
                     'chat_id': chat_id_telegram,
                     'text': message,
-                    'parse_mode': 'Markdown'  # Using Markdown formatting
+                    'parse_mode': 'MarkdownV2'  # Using Markdown formatting
                 }
                 msg_data_extended = {
                     'chat_id': chat_id_telegram,
-                    'text': message_extended,
-                    'parse_mode': 'Markdown'  # Using Markdown formatting
+                    'text': message_extended
                 }
-                result_telegram_base = requests.posts(telegram_url, headers=headers, data=json.dumps(msg_data_base))
+                result_telegram_base = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data_base))
                 if result_telegram_base.status_code == 200:
                     result_telegram_extended = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data_extended))
                     result_telegram.status_code = result_telegram_extended.status_code
@@ -83,16 +82,20 @@ def telegram_send(telegram, chat_id_telegram, token_telegram, message, message_e
 
 def vKTeams_send(vkteams, chat_id_vkteams, token_vkteams, message, message_extended):
     if vkteams != False:
-        message += f"*📑 Log:* {str(message_extended)}"
         vkteams_url = "https://myteam.mail.ru/bot/v1//messages/sendText" + "?token=" + \
-            token_vkteams + "&chatId=" + chat_id_vkteams + "&parseMode=MarkdownV2" + "&text=" + message
+            token_vkteams + "&chatId=" + chat_id_vkteams + "&parseMode=MarkdownV2" + "&text=" + message + " 1/2"
 
+        vkteams_url_extended = "https://myteam.mail.ru/bot/v1//messages/sendText" + "?token=" + \
+            token_vkteams + "&chatId=" + chat_id_vkteams + "&parseMode=MarkdownV2" + "&text=" + "2/2 " + message_extended
         # Send the request
         for i in range(try_counter):
             result_vkteams = requests.post(vkteams_url)
             if result_vkteams.status_code == 200:
                 logger.info("Successs sending message to VK Teams")
-                break
+                result_vkteams_extended = requests.post(vkteams_url_extended)
+                if result_vkteams_extended.status_code == 200:
+                    logger.info("Successs sending extended_message to VK Teams")
+                    break
             else:
                 logger.error("Failed sending message to VK Teams")
                 logger.info("Number of counters to send message to VK Teams: " + str(try_counter - i))
@@ -126,6 +129,7 @@ subject_user_name = alert_json.get('data', {}).get('win', {}).get('eventdata', {
 event_id = alert_json.get('data', {}).get('win', {}).get('system', {}).get('eventID', None)
 full_log = alert_json.get('full_log', None)
 data_win_system_message = alert_json.get('data', {}).get('win', {}).get('system', {}).get('message', None)
+cluster_node_name = alert_json.get('cluster', {}).get('node', None)
 
 
 # Vulnerabilities variable section
@@ -167,29 +171,32 @@ match vuln_severity:
     case 'Critical':
         logger.info("Founded CRITICAL vulnerability: " + vuln_CVE)
         message = f"*🚨 Critical Vulnerability Alert 🚨*\n\n" \
+                  f"* Нода кластера: {cluster_node_name} *\n\n" \
                   f"*❗ Критическая уязвимость обнаружена на {agent} ❗*\n\n" \
                   f"*#️⃣ CVE:*\n" \
                   f"└─ {vuln_CVE}\n\n" \
                   f"*🔧 Уязвимый модуль:*\n" \
                   f"└─ {vuln_package} {vuln_version}\n\n" \
                   f"*📄 Описание:*\n" \
+                  f"*📄 Описание:*\n" \
                   f"└─ {vuln_title}\n\n" \
                   f"*📑 Подробнее:*\n" \
-                  f"└─ {vuln_reference}\n\n" \
-                  f"#vulnerability #critical \n\n"
+                  f"└─ {vuln_reference}\n\n"
     case 'High':
         logger.info("Founded HIGH vulnerability: " + vuln_CVE)
         message = f"*🚨 Critical Vulnerability Alert 🚨*\n\n" \
-                  f"*❗ Критическая уязвимость обнаружена на {agent} ❗*\n\n" \
+                  f"* Нода кластера: {cluster_node_name} ❗*\n\n" \
+                  f"*❗ Уязвимость высокого уровня обнаружена на {agent} ❗*\n\n" \
                   f"*#️⃣ CVE:*\n" \
                   f"└─ {vuln_CVE}\n\n" \
                   f"*🔧 Уязвимый модуль:*\n" \
                   f"└─ {vuln_package} {vuln_version}\n\n" \
                   f"*📄 Описание:*\n" \
+                  f"*📄 Описание:*\n" \
                   f"└─ {vuln_title}\n\n" \
                   f"*📑 Подробнее:*\n" \
-                  f"└─ {vuln_reference}\n\n" \
-                  f"#vulnerability #high \n\n"
+                  f"└─ {vuln_reference}\n\n"
+                  
     case _:
         pass
 
@@ -283,69 +290,58 @@ match vuln_severity:
 #         pass
 
 
-# Generate message based on rule ID
-if rule_id == "5760":
-    message = f"*🚨 Wazuh Alert 🚨*\n\n" \
-              f"*📄 Описание:* {description}\n" \
-              f"*❗ Уровень:* {alert_level}\n" \
-              f"*💻 Агент:* {agent}\n" \
-              f"*🌍 IP-адрес агента:* {agent_ip}\n" \
-              f"*🌍 IP-атакующего:* {src_ip}"
+
+
+logger.info("Received Wazuh Alert: " + description)
+
+message = f"*🚨 Wazuh Alert 🚨*\n\n"
+message += f"* Нода кластера: {cluster_node_name} *\n"
+
+if description != None:
+    message += f"*📄 Описание:* {description}\n" 
+if alert_level != None:
+    message += f"*❗ Уровень:* {alert_level}\n"
+if agent != None:
+    message += f"*💻 Агент:* {agent}\n"
+if agent_ip != None:
+    message += f"*🌍 IP-адрес агента:* {agent_ip}\n"
+if system_message != None:
+    message += f"*📑 Сообщение:* {system_message}\n"
+if subject_user_name != None:
+    message += f"*👾 Нарушитель:* {subject_user_name}\n"
+if action != None:
+    message += f"*🔧 Действие:* {action}\n"
+
+message_extended = None
+message_lenght = len(message)
+if full_log != None:
+    full_log_length = len(full_log)
+    message_extended = full_log
 else:
-#    CHAT_ID="-19XXXXXXX1"
+    full_log_length = 0
+if data_win_system_message != None:
+    data_win_system_message_length = len(data_win_system_message)
+    message_extended = data_win_system_message
+else: 
+    data_win_system_message_length = 0
+logger.debug("message_lenght: " + message_lenght + ", full_log_lenght:" + full_log_length + ", dwsm_lenght: " + data_win_system_message_length)
 
-    logger.info("Received Wazuh Alert: " + description)
-    message = f"*🚨 Wazuh Alert 🚨*\n\n"
-
-    if description != None:
-        message += f"*📄 Описание:* {description}\n" 
-    if alert_level != None:
-        message += f"*❗ Уровень:* {alert_level}\n"
-    if agent != None:
-        message += f"*💻 Агент:* {agent}\n"
-    if agent_ip != None:
-        message += f"*🌍 IP-адрес агента:* {agent_ip}\n"
-    if system_message != None:
-        message += f"*📑 Сообщение:* {system_message}\n"
-    if subject_user_name != None:
-        message += f"*👾 Нарушитель:* {subject_user_name}\n"
-    if action != None:
-        message += f"*🔧 Действие:* {action}\n"
-
-    message_extended = None
-    message_lenght = len(message)
+if (message_lenght + full_log_length) > 4096 or (message_lenght + data_win_system_message_length) > 4080:
+    telegram_send(telegram, chat_id_telegram,token_telegram,message + '\n\n' +'1/2')
+    vKTeams_send(vkteams, chat_id_vkteams,token_vkteams,message + '\n\n' +'1/2')
+    logger.info("message 1/2 sended")
     if full_log != None:
-        full_log_length = len(full_log)
-        message_extended = full_log
-    else:
-        full_log_length = 0
+        telegram_send(telegram, chat_id_telegram,token_telegram,'2/2' + '\n\n' + message_extended)
+        vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, '2/2' + '\n\n' + message_extended)
+        logger.info("full_log 2/2 sended")
     if data_win_system_message != None:
-        data_win_system_message_length = len(data_win_system_message)
-        message_extended = data_win_system_message
-    else: 
-        data_win_system_message_length = 0
-    logger.debug("message_lenght: " + str(message_lenght) + ", full_log_lenght:" + str(full_log_length) + ", dwsm_lenght: " + str(data_win_system_message_length))
-
-    if (message_lenght + full_log_length) > 4096 or (message_lenght + data_win_system_message_length) > 4080:
-        telegram_send(telegram, chat_id_telegram,token_telegram,message + '\n\n' +'1/2')
-        vKTeams_send(vkteams, chat_id_vkteams,token_vkteams,message + '\n\n' +'1/2')
-        logger.info("message 1/2 sended")
-        if full_log != None:
-            telegram_send(telegram, chat_id_telegram,token_telegram,'2/2' + '\n\n' + message_extended)
-            vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, '2/2' + '\n\n' + message_extended)
-            logger.info("full_log 2/2 sended")
-        if data_win_system_message != None:
-            telegram_send(telegram, chat_id_telegram,token_telegram,'2/2' + '\n\n' + message_extended)
-            vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, '2/2' + '\n\n' + message_extended)
-            logger.info("data_win_system_message 2/2 sended")
-    else:   
-        # if full_log != None:
-        #     message += f"*📑 Log:* {full_log}\n"
-        # if data_win_system_message != None:
-        #     message += f"*📑 Log:* {data_win_system_message}"
-        telegram_send(telegram, chat_id_telegram,token_telegram,message, message_extended)
-        vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, message, message_extended)
-        logger.info("Full message sended. Count of symbols: " + str(len(message + message_extended)))
+        telegram_send(telegram, chat_id_telegram,token_telegram,'2/2' + '\n\n' + message_extended)
+        vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, '2/2' + '\n\n' + message_extended)
+        logger.info("data_win_system_message 2/2 sended")
+else:   
+    telegram_send(telegram, chat_id_telegram,token_telegram,message, message_extended)
+    vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, message, message_extended)
+    logger.info("Full message sended. Count of symbols: " + len(message + message_extended))
 
 
 logger.info("Bot complete job")   
