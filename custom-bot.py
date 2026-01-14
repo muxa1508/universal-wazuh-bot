@@ -79,7 +79,8 @@ def telegram_send(telegram, chat_id_telegram, token_telegram, message, message_e
                 if result_telegram_base.status_code == 200:
                     result_telegram_extended = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data_extended))
                     result_telegram.status_code = result_telegram_extended.status_code
-                    logger.debug("STATUS CODE result_telegram_extended: " + str(result_telegram_extended.status_code)) 
+                    logger.debug("STATUS CODE result_telegram_extended: " + str(result_telegram_extended.status_code))
+                    break
             else:
                 logger.error("Failed sending message to TELEGRAM" )
                 logger.info("Number of counts to send message to TELEGRAM: " + str(try_counter - i))
