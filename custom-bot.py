@@ -4,16 +4,12 @@ import sys
 import json
 import requests
 import logging
-import time
 from requests.auth import HTTPBasicAuth
 from logging.handlers import RotatingFileHandler
 
 #Enable bots: True/False
 telegram = True
 vkteams = True
-
-#Count of tries to send message
-try_counter = 5
 
 #Telegram settings
 #CHAT_ID="-xxxx" --- change with your chat id 
@@ -56,39 +52,35 @@ def telegram_send(telegram, chat_id_telegram, token_telegram, message, message_e
     
         headers = {'content-type': 'application/json', 'Accept-Charset': 'UTF-8'}
 
-        for i in range(try_counter):
-            logger.debug(str(i) + " - try to send message to TELEGRAM")
-            result_telegram = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data))
-            logger.debug("STATUS CODE result_telegram: " + str(result_telegram.status_code)) 
-            if result_telegram.status_code == 200:
-                logger.info("Successs sending message to TELEGRAM")
-                break
-            elif result_telegram.status_code == 400:
-                logger.error("Failed sending message to TELEGRAM. Try send splitted without *Md*")
-                msg_data_base = {
-                    'chat_id': chat_id_telegram,
-                    'text': message,
-                    'parse_mode': 'Markdown'  # Using Markdown formatting
-                }
-                msg_data_extended = {
-                    'chat_id': chat_id_telegram,
-                    'text': message_extended
-                }
-                result_telegram_base = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data_base))
-                logger.debug("STATUS CODE result_telegram_base: " + str(result_telegram_base.status_code))
-                if result_telegram_base.status_code == 200:
-                    result_telegram_extended = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data_extended))
-                    result_telegram.status_code = result_telegram_extended.status_code
-                    logger.debug("STATUS CODE result_telegram_extended: " + str(result_telegram_extended.status_code))
-                    break
-            else:
-                logger.error("Failed sending message to TELEGRAM" )
-                logger.info("Number of counts to send message to TELEGRAM: " + str(try_counter - i))
-                logger.info(result_telegram.reason)
-                logger.error("Error: "+ str(result_telegram.status_code))
-                logger.debug(str(msg_data))
-                i += 1
-                time.sleep(60)
+    
+        logger.debug(str(i) + " - try to send message to TELEGRAM")
+        result_telegram = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data))
+        logger.debug("STATUS CODE result_telegram: " + str(result_telegram.status_code)) 
+        if result_telegram.status_code == 200:
+            logger.info("Successs sending message to TELEGRAM")
+        elif result_telegram.status_code == 400:
+            logger.error("Failed sending message to TELEGRAM. Try send splitted without *Md*")
+            msg_data_base = {
+                'chat_id': chat_id_telegram,
+                'text': message,
+                'parse_mode': 'Markdown'  # Using Markdown formatting
+            }
+            msg_data_extended = {
+                'chat_id': chat_id_telegram,
+                'text': message_extended
+            }
+            result_telegram_base = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data_base))
+            logger.debug("STATUS CODE result_telegram_base: " + str(result_telegram_base.status_code))
+            if result_telegram_base.status_code == 200:
+                result_telegram_extended = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data_extended))
+                result_telegram.status_code = result_telegram_extended.status_code
+                logger.debug("STATUS CODE result_telegram_extended: " + str(result_telegram_extended.status_code))
+        else:
+            logger.error("Failed sending message to TELEGRAM" )
+            logger.info("Number of counts to send message to TELEGRAM: " + str(try_counter - i))
+            logger.info(result_telegram.reason)
+            logger.error("Error: "+ str(result_telegram.status_code))
+            logger.debug(str(msg_data))
 
 def vKTeams_send(vkteams, chat_id_vkteams, token_vkteams, message, message_extended):
     if vkteams != False:
@@ -96,23 +88,20 @@ def vKTeams_send(vkteams, chat_id_vkteams, token_vkteams, message, message_exten
             token_vkteams + "&chatId=" + chat_id_vkteams + "&parseMode=MarkdownV2" + "&text=" + message + " 1/2"
 
         vkteams_url_extended = "https://myteam.mail.ru/bot/v1//messages/sendText" + "?token=" + \
-            token_vkteams + "&chatId=" + chat_id_vkteams + "&parseMode=MarkdownV2" + "&text=" + "2/2 " + message_extended
+            token_vkteams + "&chatId=" + chat_id_vkteams + "&text=" + "2/2 " + message_extended
         # Send the request
-        for i in range(try_counter):
-            result_vkteams = requests.post(vkteams_url)
-            if result_vkteams.status_code == 200:
-                logger.info("Successs sending message to VK Teams")
-                result_vkteams_extended = requests.post(vkteams_url_extended)
-                if result_vkteams_extended.status_code == 200:
-                    logger.info("Successs sending extended_message to VK Teams")
-                    break
-            else:
-                logger.error("Failed sending message to VK Teams")
-                logger.info("Number of counters to send message to VK Teams: " + str(try_counter - i))
-                logger.info(result_vkteams.reason)
-                logger.error("Error: "+ str(result_vkteams.status_code))
-                i += 1
-                time.sleep(60)
+        result_vkteams = requests.post(vkteams_url)
+        if result_vkteams.status_code == 200:
+            logger.info("Successs sending message to VK Teams")
+            result_vkteams_extended = requests.post(vkteams_url_extended)
+            if result_vkteams_extended.status_code == 200:
+                logger.info("Successs sending extended_message to VK Teams")
+        else:
+            logger.error("Failed sending message to VK Teams")
+            logger.info("Number of counters to send message to VK Teams: " + str(try_counter - i))
+            logger.info(result_vkteams.reason)
+            logger.error("Error: "+ str(result_vkteams.status_code))
+
 
 logger.info("--------------------------------")
 logger.info("Bot receive Wazuh Alert.")
