@@ -4,6 +4,7 @@ import sys
 import json
 import requests
 import logging
+import time
 from requests.auth import HTTPBasicAuth
 from logging.handlers import RotatingFileHandler
 
@@ -53,7 +54,7 @@ def telegram_send(telegram, chat_id_telegram, token_telegram, message, message_e
         headers = {'content-type': 'application/json', 'Accept-Charset': 'UTF-8'}
 
     
-        logger.debug(str(i) + " - try to send message to TELEGRAM")
+        logger.debug("Try to send message to TELEGRAM")
         result_telegram = requests.post(telegram_url, headers=headers, data=json.dumps(msg_data))
         logger.debug("STATUS CODE result_telegram: " + str(result_telegram.status_code)) 
         if result_telegram.status_code == 200:
@@ -77,7 +78,6 @@ def telegram_send(telegram, chat_id_telegram, token_telegram, message, message_e
                 logger.debug("STATUS CODE result_telegram_extended: " + str(result_telegram_extended.status_code))
         else:
             logger.error("Failed sending message to TELEGRAM" )
-            logger.info("Number of counts to send message to TELEGRAM: " + str(try_counter - i))
             logger.info(result_telegram.reason)
             logger.error("Error: "+ str(result_telegram.status_code))
             logger.debug(str(msg_data))
@@ -98,7 +98,6 @@ def vKTeams_send(vkteams, chat_id_vkteams, token_vkteams, message, message_exten
                 logger.info("Successs sending extended_message to VK Teams")
         else:
             logger.error("Failed sending message to VK Teams")
-            logger.info("Number of counters to send message to VK Teams: " + str(try_counter - i))
             logger.info(result_vkteams.reason)
             logger.error("Error: "+ str(result_vkteams.status_code))
 
