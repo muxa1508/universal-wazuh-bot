@@ -130,6 +130,7 @@ event_id = alert_json.get('data', {}).get('win', {}).get('system', {}).get('even
 full_log = alert_json.get('full_log', None)
 data_win_system_message = alert_json.get('data', {}).get('win', {}).get('system', {}).get('message', None)
 data_hostname = alert_json.get('data', {}).get('hostName', None)
+syscheck_diff = alert_json.get('syscheck', {}).get('diff', None)
 
 
 # Vulnerabilities variable section
@@ -319,6 +320,8 @@ if rule_id != None:
         message += f"*👾 Нарушитель:* {subject_user_name}\n"
     if action != None:
         message += f"*🔧 Действие:* {action}\n"
+    if syscheck_diff != None:
+        message += f"*Checkerr:* {syscheck_diff}\n"
 
     message_extended = None
     message_lenght = len(message)
