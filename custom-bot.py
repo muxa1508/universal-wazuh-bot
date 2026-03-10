@@ -15,11 +15,13 @@ vkteams = True
 #Telegram settings
 #CHAT_ID="-xxxx" --- change with your chat id 
 chat_id_telegram = ""
+monitoring_chat_id_telegram = ""
 token_telegram = ""
 
 
 #VK Teams settings
 chat_id_vkteams = ""
+monitoring_chat_id_vkteams = ""
 token_vkteams = ""
 
 #Logger setup
@@ -341,9 +343,20 @@ if rule_id != None:
 
     logger.debug("message_lenght: " + str(message_lenght) + ", full_log_lenght:" + str(full_log_length) + ", dwsm_lenght: " + str(data_win_system_message_length))
 
+    if chat_id_telegram != None:
+        telegram_send(telegram, chat_id_telegram,token_telegram,message, message_extended)
+    if chat_id_vkteams != None:
+        vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, message, message_extended)
 
-    telegram_send(telegram, chat_id_telegram,token_telegram,message, message_extended)
-    vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, message, message_extended)
+    if rule_id in [
+        "150004",    # The policy for using Kerberos tickets has been changed
+        "150002",    # The user was changed using the freeipa api
+        "150001"     # A new user has been created using the freeipa api
+                   ]:
+        if monitoring_chat_id_telegram != None:
+            telegram_send(telegram, monitoring_chat_id_telegram,token_telegram,message, message_extended)
+        if monitoring_chat_id_vkteams != None:
+            vKTeams_send(vkteams, monitoring_chat_id_vkteams,token_vkteams, message, message_extended)
 
     logger.info("Full message sended. Count of symbols: " + str(len(message + message_extended)))  
 
