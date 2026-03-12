@@ -22,7 +22,7 @@
 
 ```
 sudo apt install python3-requests -y
-sudo /var/ossec/framework/python/bin/pip3 install logging
+sudo /var/ossec/framework/python/bin/pip3 install logging holidays
 ```
 
 2. Зарегистрировать ботов в мессенджерах и прописать их токены в *custom-bot.py*
