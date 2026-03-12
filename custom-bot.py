@@ -36,6 +36,11 @@ fileHandler = RotatingFileHandler(logger_path.format(time.strftime("%Y%m%d-%H%M%
 logger = logging.getLogger('wazuh_bot')
 logger.addHandler(fileHandler)
 
+def is_night_time_moscow():
+    """Проверяет, находится ли текущее время в диапазоне 20:00-08:00 по Москве (системное время)"""
+    current_hour = int(time.strftime("%H"))
+    # Ночное время: с 20:00 до 08:00
+    return current_hour >= 20 or current_hour < 8
 
 def telegram_send(telegram, chat_id_telegram, token_telegram, message, message_extended):
     if telegram != False:
@@ -348,15 +353,18 @@ if rule_id != None:
     if chat_id_vkteams != None:
         vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, message, message_extended)
 
-    if rule_id in [
-        "150004",    # The policy for using Kerberos tickets has been changed
-        "150002",    # The user was changed using the freeipa api
-        "150001"     # A new user has been created using the freeipa api
-                   ]:
-        if monitoring_chat_id_telegram != None:
-            telegram_send(telegram, monitoring_chat_id_telegram,token_telegram,message, message_extended)
-        if monitoring_chat_id_vkteams != None:
-            vKTeams_send(vkteams, monitoring_chat_id_vkteams,token_vkteams, message, message_extended)
+    if is_night_time_moscow():
+        if rule_id in [
+            "150004",    # The policy for using Kerberos tickets has been changed
+            "150002",    # The user was changed using the freeipa api
+            "150001"     # A new user has been created using the freeipa api
+                    ]:
+            if monitoring_chat_id_telegram != None:
+                telegram_send(telegram, monitoring_chat_id_telegram,token_telegram,message, message_extended)
+            if monitoring_chat_id_vkteams != None:
+                vKTeams_send(vkteams, monitoring_chat_id_vkteams,token_vkteams, message, message_extended)
+    else:
+        logger.info("Monitoring notification skipped - outside night time window (20:00-08:00 MSK)")
 
     logger.info("Full message sended. Count of symbols: " + str(len(message + message_extended)))  
 
