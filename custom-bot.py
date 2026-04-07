@@ -118,6 +118,11 @@ def vKTeams_send(vkteams, chat_id_vkteams, token_vkteams, message, message_exten
             logger.info(result_vkteams.reason)
             logger.error("Error: "+ str(result_vkteams.status_code))
 
+def mesasages_send(message, message_extended):
+    if monitoring_chat_id_telegram != None:
+        telegram_send(telegram, monitoring_chat_id_telegram,token_telegram,message, message_extended)
+    if monitoring_chat_id_vkteams != None:
+        vKTeams_send(vkteams, monitoring_chat_id_vkteams,token_vkteams, message, message_extended)
 
 logger.info("--------------------------------")
 logger.info("Bot receive Wazuh Alert.")
@@ -358,21 +363,70 @@ if rule_id != None:
 
     logger.debug("message_lenght: " + str(message_lenght) + ", full_log_lenght:" + str(full_log_length) + ", dwsm_lenght: " + str(data_win_system_message_length))
 
-    if chat_id_telegram != None:
-        telegram_send(telegram, chat_id_telegram,token_telegram,message, message_extended)
-    if chat_id_vkteams != None:
-        vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, message, message_extended)
+    mesasages_send(message, message_extended)
 
     if is_not_working_time():
         if rule_id in [
             "150004",    # The policy for using Kerberos tickets has been changed
             "150002",    # The user was changed using the freeipa api
-            "150001"     # A new user has been created using the freeipa api
-                    ]:
-            if monitoring_chat_id_telegram != None:
-                telegram_send(telegram, monitoring_chat_id_telegram,token_telegram,message, message_extended)
-            if monitoring_chat_id_vkteams != None:
-                vKTeams_send(vkteams, monitoring_chat_id_vkteams,token_vkteams, message, message_extended)
+            "150001",    # A new user has been created using the freeipa api
+        ]:
+            message += f"*🙀 Реагирование:* Проверить в wazuh пользователя который произвёл изменение, поле data.srcuser, уточнить у администратора домена производившего изменение легитимность события.\n" \
+                        f"Если администратор подтвердил легитимность инцидент завершается.\n" \
+                        f"В ином случае администратор блокирует созданную уз, уведомляется сотрудник ИБ для расследования"
+            
+            mesasages_send(message, message_extended)
+
+        elif rule_id in [
+            "5405",      # Unauthorized user attempted to use sudo
+            "5404", "103001", "103002",    # Multiple failed sudo execution attempts
+            "103003", "103004",             # Successfully executed sudo after several failed attempts
+        ]:
+            message += f"*🙀 Реагирование:* Проверить в wazuh какой пользователь пытался использовать sudo, поле data.srcuser. " \
+                        f"Если из имени учётки понятно какой пользователь пытался выполнить sudo обратится к нему для уточнения легитимности события, иначе обратится к владельцу узла.\n" \
+                        f"Если администратор подтвердил легитимность инцидент завершается.\n" \
+                        f"В ином случае администратор блокирует созданную уз, уведомляется сотрудник ИБ для расследования"
+            
+            mesasages_send(message, message_extended)
+
+        elif rule_id in [
+            "100801",   # sshd: Attempt to login using a non-existent user (SaaS Linux)
+            "100803",   # sshd: Multiple failure attempts(SaaS Linux)
+            "107310",   # Password-based connection attempt failed (SaaS)
+            "107309",   # Successful ssh login using a password (SaaS)
+        ]:
+            message += f"*🙀 Реагирование:* Проверить в wazuh какой пользователь пытался авторизоваться, поле data.srcuser. " \
+                        f"Если из имени учётки понятно какой пользователь пытался авторизоваться обратится к нему для уточнения легитимности события, иначе обратится к владельцу узла.\n" \
+                        f"Если администратор подтвердил легитимность инцидент завершается.\n" \
+                        f"В ином случае администратор блокирует созданную уз, уведомляется сотрудник ИБ для расследования"
+
+            mesasages_send(message, message_extended)
+
+        elif rule_id in [
+            "100060",   # User was added to SaaS Domain Admin Group
+            "100061",   # User was added to ServiceCom Domain Admin Group
+            "100062",   # User was added to ServiceCom Domain Group $(win.eventdata.targetUserName)
+        ]:
+            
+            message += f"*🙀 Реагирование:* Проверить в wazuh какой пользователь вносил измененение, поле data.win.eventdata.subjectUserName. " \
+                        f"Обратится к владельцу учётной записи за подтверждением легитимности, если не понятно чья учётная запись, обратится к администратору домена.\n" \
+                        f"Если администратор подтвердил легитимность инцидент завершается.\n" \
+                        f"В ином случае администратор блокирует созданную уз, уведомляется сотрудник ИБ для расследования."
+
+            mesasages_send(message, message_extended)
+
+        elif rule_id in [
+            "104104", "104106", "104107"    # Attempting to access the management port (SaaS)
+        ]:
+            
+            message += f"*🙀 Реагирование:* Проверить в wazuh ip адрес с которого пытались подключится, поле data.srcip. Далее по ip ищем узел с которого шло подключение и проверяем наличие событий авторизаций на нём для определения виновника. " \
+                        f"Если не получается найти узел с таким ip, можно выполнить поиск по событиям в который он фигурирует.\n" \
+                        f"Для поиска в wazuh в  строке поиска вводим data.srcip:нужный ip , если ничего не находит можно выполнить поиск по маске *нужный ip*. Ищем события авторизаций или любые где фигурирует учётная запись позволяющая определить владельца ip адреса." \
+                        f"Если самостоятельно не получается определить узел по ip  необходимо обратится к сетевому инженеру" \
+                        f"Если IP адрес не является легитимным, необходимо сообщить сетевому инжженеру информацию для добавления адреса в список блокированных и уведомить отдел ИБ.\n"
+            
+            mesasages_send(message, message_extended)
+
     else:
         logger.info("Monitoring notification skipped - outside night time window (20:00-08:00 MSK)")
 
