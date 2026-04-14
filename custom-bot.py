@@ -11,7 +11,7 @@ from requests.auth import HTTPBasicAuth
 from logging.handlers import RotatingFileHandler
 
 #Enable bots: True/False
-telegram = True
+telegram = False
 vkteams = True
 
 #Telegram settings
@@ -119,10 +119,16 @@ def vKTeams_send(vkteams, chat_id_vkteams, token_vkteams, message, message_exten
             logger.error("Error: "+ str(result_vkteams.status_code))
 
 def mesasages_send(message, message_extended):
+    if chat_id_telegram != None:
+        telegram_send(telegram, chat_id_telegram, token_telegram, message, message_extended)
+    if chat_id_vkteams != None:
+        vKTeams_send(vkteams, chat_id_vkteams, token_vkteams, message, message_extended)
+
+def mesasages_send_monitoring(message, message_extended):
     if monitoring_chat_id_telegram != None:
-        telegram_send(telegram, monitoring_chat_id_telegram,token_telegram,message, message_extended)
+        telegram_send(telegram, monitoring_chat_id_telegram, token_telegram, message, message_extended)
     if monitoring_chat_id_vkteams != None:
-        vKTeams_send(vkteams, monitoring_chat_id_vkteams,token_vkteams, message, message_extended)
+        vKTeams_send(vkteams, monitoring_chat_id_vkteams, token_vkteams, message, message_extended)
 
 logger.info("--------------------------------")
 logger.info("Bot receive Wazuh Alert.")
@@ -226,10 +232,8 @@ if vuln_severity != None:
             logger.debug("Vulnerability type: Unknown")
             pass
 
-    telegram_send(telegram, chat_id_telegram,token_telegram,message)
-    vKTeams_send(vkteams, chat_id_vkteams,token_vkteams, message)
+    mesasages_send(message, None)
         
-
         
 
 # Generate message based on KES rule ID
@@ -375,7 +379,7 @@ if rule_id != None:
                         f"Если администратор подтвердил легитимность инцидент завершается.\n" \
                         f"В ином случае администратор блокирует созданную уз, уведомляется сотрудник ИБ для расследования"
             
-            mesasages_send(message, message_extended)
+            mesasages_send_monitoring(message, message_extended)
 
         elif rule_id in [
             "5405",      # Unauthorized user attempted to use sudo
@@ -387,7 +391,7 @@ if rule_id != None:
                         f"Если администратор подтвердил легитимность инцидент завершается.\n" \
                         f"В ином случае администратор блокирует созданную уз, уведомляется сотрудник ИБ для расследования"
             
-            mesasages_send(message, message_extended)
+            mesasages_send_monitoring(message, message_extended)
 
         elif rule_id in [
             "100801",   # sshd: Attempt to login using a non-existent user (SaaS Linux)
@@ -400,7 +404,7 @@ if rule_id != None:
                         f"Если администратор подтвердил легитимность инцидент завершается.\n" \
                         f"В ином случае администратор блокирует созданную уз, уведомляется сотрудник ИБ для расследования"
 
-            mesasages_send(message, message_extended)
+            mesasages_send_monitoring(message, message_extended)
 
         elif rule_id in [
             "100060",   # User was added to SaaS Domain Admin Group
@@ -413,7 +417,7 @@ if rule_id != None:
                         f"Если администратор подтвердил легитимность инцидент завершается.\n" \
                         f"В ином случае администратор блокирует созданную уз, уведомляется сотрудник ИБ для расследования."
 
-            mesasages_send(message, message_extended)
+            mesasages_send_monitoring(message, message_extended)
 
         elif rule_id in [
             "104104", "104106", "104107"    # Attempting to access the management port (SaaS)
@@ -425,7 +429,7 @@ if rule_id != None:
                         f"Если самостоятельно не получается определить узел по ip  необходимо обратится к сетевому инженеру" \
                         f"Если IP адрес не является легитимным, необходимо сообщить сетевому инжженеру информацию для добавления адреса в список блокированных и уведомить отдел ИБ.\n"
             
-            mesasages_send(message, message_extended)
+            mesasages_send_monitoring(message, message_extended)
 
     else:
         logger.info("Monitoring notification skipped - outside night time window (20:00-08:00 MSK)")
