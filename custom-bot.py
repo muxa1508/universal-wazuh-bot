@@ -6,6 +6,7 @@ import requests
 import logging
 import time
 import holidays
+import subprocess
 from datetime import datetime
 from requests.auth import HTTPBasicAuth
 from logging.handlers import RotatingFileHandler
@@ -25,6 +26,9 @@ token_telegram = ""
 chat_id_vkteams = ""
 monitoring_chat_id_vkteams = ""
 token_vkteams = ""
+
+zabbix_key = "wazuh.alert.monitoring"
+monitoring_dashboard_URL = "https://prod-infra-wazuh-dashboard-1.sec.scloud.local/app/visualize#/edit/60d7a040-7137-11f1-974d-fb25c20b890a?type=table&indexPattern=wazuh-alerts-*&_g=(filters:!(),refreshInterval:(pause:!f,value:180000),time:(from:now-24h,to:now))&_a=(filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:'wazuh-alerts-*',key:rule.groups,negate:!f,params:(query:zabbix_monitoring),type:phrase),query:(match_phrase:(rule.groups:zabbix_monitoring)))),linked:!f,query:(language:kuery,query:''),uiState:(),vis:(aggs:!((enabled:!t,id:'1',params:(),schema:metric,type:count),(enabled:!t,id:'2',params:(field:rule.description,missingBucket:!f,missingBucketLabel:Missing,order:desc,orderBy:'1',otherBucket:!f,otherBucketLabel:Other,size:1000),schema:bucket,type:terms),(enabled:!t,id:'3',params:(field:agent.name,missingBucket:!f,missingBucketLabel:Missing,order:desc,orderBy:'1',otherBucket:!f,otherBucketLabel:Other,size:1000),schema:bucket,type:terms)),params:(perPage:100,percentageCol:'',row:!t,showMetricsAtAllLevels:!f,showPartialRows:!f,showTotal:!f,totalFunc:sum),title:'%D0%A2%D0%B5%D1%81%D1%82%20zabbix',type:table))"
 
 #Logger setup
 logger_path = 'logs/bot.log'
@@ -51,6 +55,30 @@ def is_not_working_time():
     current_hour = int(time.strftime("%H"))
     is_night = current_hour >= 20 or current_hour < 8
     return is_holiday or is_weekend or is_night
+
+def get_system_hostname():
+    try:
+        hostname = subprocess.run(['hostnamectl', '--static'], capture_output=True, text=True, check=True)
+        return hostname.stdout.strip()
+    except Exception:
+        import socket
+        return socket.gethostname()
+    
+
+def is_monitoring_group():
+    if 'zabbix_monitoring' in rule_groups:
+        logger.info("Попытка отправки триггера в zabbix")
+        host = get_system_hostname()
+
+        zabbix_cmd = [
+            'zabbix_sender',
+            '-c', '/etc/zabbix/zabbix_agent2.conf',
+            '-s', host,
+            '-k', zabbix_key,
+            '-o', monitoring_dashboard_URL]
+
+        subprocess.run(zabbix_cmd, capture_output=True, text=True)
+   
 
 def telegram_send(telegram, chat_id_telegram, token_telegram, message, message_extended):
     if telegram != False:
@@ -159,6 +187,7 @@ full_log = alert_json.get('full_log', None)
 data_win_system_message = alert_json.get('data', {}).get('win', {}).get('system', {}).get('message', None)
 data_hostname = alert_json.get('data', {}).get('hostName', None)
 syscheck_diff = alert_json.get('syscheck', {}).get('diff', None)
+rule_groups = alert_json['rule']['groups'] if 'groups' in alert_json['rule'] else None
 
 
 # Vulnerabilities variable section
@@ -368,6 +397,8 @@ if rule_id != None:
     logger.debug("message_lenght: " + str(message_lenght) + ", full_log_lenght:" + str(full_log_length) + ", dwsm_lenght: " + str(data_win_system_message_length))
 
     mesasages_send(message, message_extended)
+
+    is_monitoring_group()
 
     if is_not_working_time():
         if rule_id in [
